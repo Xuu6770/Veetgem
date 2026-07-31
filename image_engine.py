@@ -7,6 +7,16 @@ from i18n import TRANSLATIONS
 class ImageEngine:
     """负责预览图的拼接、绘制和保存"""
 
+    # 每个元数据标签的浅色底 + 深色字（依次对应：大小/分辨率/时长/编码/帧率/比特率）
+    CHIP_COLORS = [
+        ((227, 242, 253), (21, 101, 192)),    # 蓝
+        ((243, 229, 245), (123, 31, 162)),    # 紫
+        ((224, 242, 241), (0, 105, 92)),      # 青
+        ((255, 243, 224), (230, 81, 0)),      # 橙
+        ((232, 245, 233), (46, 125, 50)),     # 绿
+        ((252, 228, 236), (194, 24, 91)),     # 粉
+    ]
+
     def __init__(self):
         # 字体检测路径
         self.font_paths = [
@@ -30,6 +40,117 @@ class ImageEngine:
         td = timedelta(seconds=int(seconds))
         return str(td)
 
+    def _build_header_chips(self, video_info, lang, scale, font):
+        """构建头部胶囊标签的文本与尺寸信息"""
+        t = TRANSLATIONS[lang]
+        items = [
+            f"{t['info_size']}: {video_info['size_mb']:.2f} MB",
+            f"{t['info_res']}: {video_info['width']}×{video_info['height']}",
+            f"{t['info_duration']}: {self.format_time(video_info['duration'])}",
+            f"{t['info_codec']}: {video_info['codec'].upper()}",
+            f"{t['info_fps']}: {video_info['fps']} fps",
+            f"{t['info_bitrate']}: {video_info['bitrate_kbps']:.0f} kbps",
+        ]
+
+        # 临时画笔用于测量文字
+        tmp = ImageDraw.Draw(Image.new('RGB', (1, 1)))
+        pad_x = int(20 * scale)
+        pad_y = int(12 * scale)
+
+        chips = []
+        for i, text in enumerate(items):
+            bbox = tmp.textbbox((0, 0), text, font=font)
+            tw = int(bbox[2] - bbox[0])
+            th = int(bbox[3] - bbox[1])
+            bg, fg = self.CHIP_COLORS[i % len(self.CHIP_COLORS)]
+            chips.append({
+                'text': text,
+                'tw': tw,
+                'th': th,
+                'w': tw + pad_x * 2,
+                'h': th + pad_y * 2,
+                'bg': bg,
+                'fg': fg,
+                'pad_x': pad_x,
+                'pad_y': pad_y,
+            })
+        return chips
+
+    def _layout_chips(self, chips, available_width, gap, start_x):
+        """将标签按行排布，超出宽度时自动换行。返回 (rows, total_height)。"""
+        rows = []
+        current_row = []
+        current_w = 0
+        chip_h = chips[0]['h'] if chips else 0
+
+        for chip in chips:
+            need = chip['w'] if not current_row else chip['w'] + gap
+            if current_row and current_w + need > available_width:
+                rows.append(current_row)
+                current_row = [chip]
+                current_w = chip['w']
+            else:
+                current_w += need
+                current_row.append(chip)
+        if current_row:
+            rows.append(current_row)
+
+        row_gap = gap
+        total_height = len(rows) * chip_h + max(0, len(rows) - 1) * row_gap
+
+        # 为每行计算水平居中起点
+        layout = []
+        y = 0
+        for row in rows:
+            row_w = sum(c['w'] for c in row) + gap * (len(row) - 1)
+            x = start_x + max(0, (available_width - row_w) // 2)
+            for chip in row:
+                layout.append((chip, x, y))
+                x += chip['w'] + gap
+            y += chip_h + row_gap
+
+        return layout, total_height
+
+    def _prepare_header(self, video_info, lang, scale, margin, target_width):
+        """预计算头部胶囊布局与高度，供画布尺寸与绘制共用。"""
+        font = self.get_font(int(24 * scale))
+        chips = self._build_header_chips(video_info, lang, scale, font)
+        side_pad = margin * 2
+        gap = int(14 * scale)
+        v_pad = int(22 * scale)
+        layout, content_h = self._layout_chips(chips, target_width - side_pad * 2, gap, side_pad)
+        return {
+            'font': font,
+            'layout': layout,
+            'v_pad': v_pad,
+            'height': content_h + v_pad * 2,
+        }
+
+    def _draw_header(self, draw, header, target_width, scale):
+        """根据预计算结果绘制胶囊式元数据头部。"""
+        header_height = header['height']
+        font = header['font']
+        v_pad = header['v_pad']
+
+        # 浅灰底栏 + 底部分割线，与下方网格区分开
+        draw.rectangle([0, 0, target_width, header_height], fill=(248, 249, 250))
+        line_y = header_height - max(1, int(2 * scale))
+        draw.rectangle([0, line_y, target_width, header_height], fill=(230, 232, 235))
+
+        for chip, x, y_off in header['layout']:
+            y = v_pad + y_off
+            radius = chip['h'] // 2  # 全圆角胶囊
+            draw.rounded_rectangle(
+                [x, y, x + chip['w'], y + chip['h']],
+                radius=radius,
+                fill=chip['bg'],
+            )
+            # textbbox 的 top/left 可能非零（字体 bearing），用偏移修正垂直居中
+            bbox = draw.textbbox((0, 0), chip['text'], font=font)
+            text_x = x + chip['pad_x'] - bbox[0]
+            text_y = y + (chip['h'] - chip['th']) // 2 - bbox[1]
+            draw.text((text_x, text_y), chip['text'], font=font, fill=chip['fg'])
+
     def create_grid_preview(self, video_info, thumb_files, settings):
         """核心拼接逻辑"""
         # 参数解析
@@ -38,38 +159,37 @@ class ImageEngine:
         margin = settings.get('margin', 10)
         show_header = settings.get('show_header', True)
         show_timestamp = settings.get('show_timestamp', True)
-        lang = settings.get('lang', 'zh')
 
         scale = target_width / 1920.0
         aspect_ratio = video_info['height'] / video_info['width']
         thumb_width = (target_width - (cols + 1) * margin) // cols
         thumb_height = int(thumb_width * aspect_ratio)
 
-        # 画布与头部高度
-        header_height = int(115 * scale) if show_header else 0
+        # 先预计算头部（胶囊可能因换行占用不同高度）
+        header = None
+        if show_header:
+            header = self._prepare_header(
+                video_info, settings.get('lang', 'zh'), scale, margin, target_width
+            )
+            header_height = header['height']
+        else:
+            header_height = 0
+
         total_height = rows * thumb_height + (rows + 1) * margin + header_height
 
         canvas = Image.new('RGB', (target_width, total_height), 'white')
         draw = ImageDraw.Draw(canvas)
 
-        font_info = self.get_font(int(28 * scale))
         font_ts = self.get_font(int(28 * scale))
 
         # 1. 绘制头部
-        if show_header:
-            t = TRANSLATIONS[lang]
-            header_text = [
-                f"{t['info_size']}: {video_info['size_mb']:.2f} MB  |  {t['info_res']}: {video_info['width']}x{video_info['height']}  |  {t['info_duration']}: {self.format_time(video_info['duration'])}",
-                f"{t['info_codec']}: {video_info['codec'].upper()}  |  {t['info_fps']}: {video_info['fps']} fps  |  {t['info_bitrate']}: {video_info['bitrate_kbps']:.0f} kbps"
-            ]
-            y_cursor = int(30 * scale)
-            draw.text((margin * 2, y_cursor), header_text[0], font=font_info, fill="black")
-            y_cursor += int(45 * scale)
-            draw.text((margin * 2, y_cursor), header_text[1], font=font_info, fill="black")
+        if header is not None:
+            self._draw_header(draw, header, target_width, scale)
 
         # 2. 拼接缩略图
         for i, (path, ts) in enumerate(thumb_files):
-            if not os.path.exists(path): continue
+            if not os.path.exists(path):
+                continue
 
             row, col = i // cols, i % cols
             x = col * (thumb_width + margin) + margin
@@ -83,16 +203,13 @@ class ImageEngine:
             if show_timestamp:
                 ts_text = self.format_time(ts)
                 bbox = draw.textbbox((0, 0), ts_text, font=font_ts)
-                # 从源头转换为整数
                 ts_w = int(bbox[2] - bbox[0])
                 ts_h = int(bbox[3] - bbox[1])
                 ts_margin = int(12 * scale)
 
-                # 现在所有的参与运算的变量都是 int
                 tx = x + thumb_width - ts_w - ts_margin * 2
                 ty = y + thumb_height - ts_h - ts_margin * 2
 
-                # 半透明遮罩 (尺寸和坐标现在都是纯正的 int 组成的 tuple)
                 overlay = Image.new('RGBA', (ts_w + 16, ts_h + 12), (0, 0, 0, 160))
                 canvas.paste(overlay, (tx - 8, ty - 4), overlay)
                 draw.text((tx, ty), ts_text, font=font_ts, fill="white")
@@ -100,7 +217,7 @@ class ImageEngine:
             os.remove(path)
 
         # 3. 保存
-        output_dir = settings.get('output_dir') or os.path.dirname(thumb_files[0][0])  # 临时修正 fallback
+        output_dir = settings.get('output_dir') or os.path.dirname(thumb_files[0][0])
         custom_name = settings.get('custom_name', "")
 
         if not custom_name:
