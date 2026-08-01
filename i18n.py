@@ -31,12 +31,6 @@ TRANSLATIONS = {
         'msg_error_title': "错误",
         'msg_error_content': "处理过程中出现错误:\n{}",
         'lang_btn': "English",
-        'info_size': "大小",
-        'info_res': "分辨率",
-        'info_duration': "时长",
-        'info_codec': "编码",
-        'info_fps': "帧率",
-        'info_bitrate': "比特率",
         'status_extracting': "正在提取第 {}/{} 张截图"
     },
     'en': {
@@ -67,12 +61,6 @@ TRANSLATIONS = {
         'msg_error_title': "Error",
         'msg_error_content': "An error occurred during processing:\n{}",
         'lang_btn': "中文",
-        'info_size': "Size",
-        'info_res': "Resolution",
-        'info_duration': "Duration",
-        'info_codec': "Codec",
-        'info_fps': "FPS",
-        'info_bitrate': "Bitrate",
         'status_extracting': "Extracting {}/{}"
     }
 }

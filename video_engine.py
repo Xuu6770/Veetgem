@@ -31,6 +31,7 @@ class VideoEngine:
 
         data = json.loads(result.stdout)
         video_stream = next((s for s in data['streams'] if s['codec_type'] == 'video'), None)
+        audio_stream = next((s for s in data['streams'] if s['codec_type'] == 'audio'), None)
         format_info = data['format']
 
         if not video_stream:
@@ -51,6 +52,7 @@ class VideoEngine:
             'filename': os.path.basename(video_path),
             'size_mb': os.path.getsize(video_path) / (1024 * 1024),
             'codec': video_stream.get('codec_name', 'unknown'),
+            'audio_codec': audio_stream.get('codec_name', 'unknown') if audio_stream else 'none',
             'fps': round(fps, 2),
             'bitrate_kbps': int(format_info.get('bit_rate', 0)) / 1000
         }
