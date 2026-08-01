@@ -46,5 +46,7 @@ app = BUNDLE(
     coll,
     name='Veetgem.app',
     icon=None,
+    CFBundleShortVersionString: '2.1.0',
     bundle_identifier=None,
+    NSHighResolutionCapable: True
 )

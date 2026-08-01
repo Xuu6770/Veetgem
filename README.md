@@ -1,74 +1,63 @@
 <h1 align = "center">Veetgem</h1>
 
 <p align = "center">
-    A video thumbnail grid generator that extracts frames from local videos and merges them into a single image for quick preview.
+    一个视频网格预览图生成器，从本地视频中提取画面并拼接，最终生成一张大图以快速预览影片。
 </p>
 
 <p align = "center">
-    <a href = "README.md" target = "_blank">EN</a> | <a href = "README_zh.md" target = "_blank">CN</a>
+    <a href = "README_en.md" target = "_blank">EN</a> | <a href = "README.md" target = "_blank">CN</a>
 </p>
 
 ---
 
-## 🚀 Features
+## 🚀 功能特性
 
-- **Format Support**: Supports major video formats including mp4, mkv, flv, etc.
-- **Smart Sampling**: Automatically distributes screenshots between 5% and 95% of the video duration to avoid common black frames, titles, and credits at the beginning or end.
-- **Information Overlay**:
-    - The top of the output grid displays file size, resolution, duration, codec, FPS, and bitrate. Font size and spacing automatically scale based on the target resolution to ensure legibility at any size.
-    - Each screenshot features a timestamp with a semi-transparent black background bar in the bottom-right corner, marking its position in the video.
-- **Customizable Options**:
-    - Number of rows and columns (determining the total number of screenshots).
-    - Output image width (height is automatically adjusted proportionally).
-    - ...
-- **Modern Design**:
-    - Full Drag & Drop support for both files and folders.
-    - Automatic system language detection (Chinese/English) with an intuitive interface and one-click manual toggle.
-    - Asynchronous processing logic ensures the UI remains responsive while processing videos, providing real-time progress feedback.
-
----
-
-## 📝 Usage
-
-1. **Add Videos**: Drag video files or folders directly into the left-side list.
-2. **Settings**: Adjust custom options as needed.
-3. **Generate**: Click the `Generate` button. By default, the preview image will be saved in the same folder as the source video.
+- **格式支持**：支持 mp4、mkv、flv 等主流视频格式。
+- **智能采样**：自动在视频的 5% 到 95% 之间均匀提取画面，以避开开头和结尾常见的黑屏、标题、制作组名单等内容。
+- **信息记录**：
+    - 在最终输出的网格预览图的顶部将记录视频的文件大小、分辨率、时长、编码、帧率、比特率。同时这些内容的字体、间距会根据目标分辨率自动进行比例缩放，确保在任何尺寸下都具备可读性。
+    - 在每张截图的右下角都存在半透明黑色背景条的时间戳，用于记录该截图在视频中的位置。
+- **自定义项**：
+    - 最终输出的预览图的行列数（行列数决定截图的数量）。
+    - 最终输出的预览图的宽度（高度将按比例自动调整）。
+    - ……
+- **现代设计**：
+    - 支持直接拖拽文件及文件夹进行导入。
+    - 自动识别系统语言（中/英）并在界面上显示为对应语言，同时支持一键手动切换。
+    - 采用异步处理逻辑，确保在处理视频时，界面持续响应，并实时反馈进度。
 
 ---
 
-## 🌅 Showcases
+## 📝 使用方法
 
-|           Output Preview Grid            |
-|:----------------------------------------:|
-| ![My Dress-Up Darling Ep. 10](demo.jpg)  |
-|    From "My Dress-Up Darling" Ep. 10     | 
-
-|      Application Screenshot       |
-|:---------------------------------:|
-|     ![App Screenshot](ui.png)     |
+1. **添加视频**：将视频文件或文件夹直接拖入左侧列表。
+2. **软件设置**：根据需要对自定义选项进行设置。
+3. **开始生成**：点击`开始生成`按钮。预览图默认将保存在原视频所在的文件夹下。
 
 ---
 
-## 🛠 Development Environment
+## 🌅 效果展示
 
-### Local Development Environment
+|               最终生成的预览图                |
+|:---------------------------------------------:|
+| ![《银魂》第 136 集](GINTAMA_136_preview.jpg) |
+|             来自《银魂》第 136 集             | 
 
-- **OS**: macOS 26.3
-- **Language**: Python 3.14.3
-- **Libraries**:
-    - **PySide6** (6.10.2): Used for building the Graphical User Interface.
-    - **Pillow** (12.1.1): Used for image stitching and rendering.
-- **External Dependency**: FFmpeg (Installed via Homebrew).
+|        程序界面截图        |
+|:--------------------:|
+| ![程序界面截图](ui_zh.png) |
 
-### Prerequisites
+---
 
-Install FFmpeg:
+## 🛠 开发环境
+
+安装 FFmpeg：
 
 ```bash
 brew install ffmpeg
 ```
 
-Install Python dependencies:
+安装 Python 依赖库：
 
 ```bash
 pip3 install -r requirements.txt
@@ -76,34 +65,34 @@ pip3 install -r requirements.txt
 
 ---
 
-## 📂 Project Structure
+## 📂 项目结构
 
-- `main.py`: Entry point, responsible for UI layout and task scheduling.
-- `i18n.py`: Internationalization dictionary and system language auto-detection logic.
-- `video_engine.py`: Video engine, responsible for FFmpeg calls.
-- `image_engine.py`: Image engine, responsible for Pillow stitching algorithms.
-- `build_app.py`: Automated packaging script for generating standalone macOS applications.
+- `main.py`：程序入口，负责 UI 布局与任务调度。
+- `i18n.py`：国际化字典及系统语言自动识别算法。
+- `video_engine.py`：视频引擎，负责 FFmpeg 调用。
+- `image_engine.py`：图像引擎，负责 Pillow 拼接算法。
+- `build_app.py`：自动化打包脚本，用于生成 macOS 独立应用。
 
 ---
 
-## 📦 Packaging to .app
+## 📦 打包至 .app
 
-Build a standalone macOS `.app` that includes FFmpeg and starts instantly:
+打包一个包含 FFmpeg 且快速启动的独立 macOS `.app`：
 
-1. Ensure `pyinstaller` is installed:
+1. 确保安装了 `pyinstaller`：
    ```bash
    pip3 install pyinstaller
    ```
-2. Run the build script:
+2. 运行打包脚本：
    ```bash
    python3 build_app.py
    ```
-3. Find the packaged software under the `dist/` directory.
+3. 在`dist/`下找到打包好的软件。
 
 ---
 
-## ⚠️ Notes
+## ⚠️ 注意事项
 
-- **The code is entirely AI-generated and may not be error-free!**
-- The entire process from development to packaging was performed on an Apple Silicon-based Mac. It has not been tested on other operating systems. **If developing on other OS, please check code compatibility.** For example, the program uses the macOS system font "PingFang SC" by default; ensure compatible fonts are installed if running on other systems.
-- The development version relies on the system's FFmpeg PATH. The version packaged via `build_app.py` includes its own binary files, requiring no extra configuration.
+- **代码均由 AI 生成，其未必正确无误！**
+- 程序从开发至打包的全过程的操作均位于基于 Apple Silicon 的 Mac 上执行，没有在别的操作系统上进行过测试，**如果使用别的操作系统进行开发，请对代码兼容性进行检查**。
+- 开发版本依赖于系统的 FFmpeg 环境路径。通过`build_app.py`打包后的版本则自带二进制文件，无需额外配置。
